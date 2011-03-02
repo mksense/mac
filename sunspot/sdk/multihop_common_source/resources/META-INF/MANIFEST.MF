@@ -1,0 +1,5 @@
+spot-startup-radiogram-protocol-manager: com.sun.spot.peripheral.radio.RadiogramProtocolManager
+spot-startup-radiostream-protocol-manager: com.sun.spot.peripheral.radio.RadiostreamProtocolManager
+spot-startup-mesh-daemon: com.sun.spot.peripheral.radio.MeshRouterDaemon
+spot-startup-management-server: com.sun.spot.networktools.NetManagementServer
+spot-startup-lowpan-ota-registration: com.sun.spot.peripheral.radio.LowPanSpotRadioHelper
