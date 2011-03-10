@@ -50,15 +50,7 @@ public class Receiver extends Thread implements PacketListener {
                         response.setData(tmpArray);
                         messageListeners.get(port).receive(response);
                     }
-                } else {
-
-                    final StringBuffer intToStr = new StringBuffer();
-                    for (int b : response.getData()) {
-                        intToStr.append((char) b);
-                    }
-                    System.out.println(response.getData() + "\n\t\t" + intToStr.toString());
-
-                }
+                } 
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -72,8 +64,6 @@ public class Receiver extends Thread implements PacketListener {
      * @param response
      */
     public void processResponse(XBeeResponse response) {
-     System.out.println(response.toString());
-
         if (response.getApiId() == ApiId.RX_16_RESPONSE) {
             queue.offer((RxResponse16) response);
         }
