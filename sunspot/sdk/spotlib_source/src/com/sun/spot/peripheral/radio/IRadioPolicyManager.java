@@ -29,7 +29,7 @@ public interface IRadioPolicyManager {
 	/**
 	 * Default PAN id to use.
 	 */
-	public static final short DEFAULT_PAN_ID = 3;
+	public static final short DEFAULT_PAN_ID = 1;
 
 	/**
 	 * Notify the policy manager that a policy has changed
