@@ -8,7 +8,6 @@
 
 #include <Xbee.h>
 #include "WProgram.h"
-#include <NewSoftSerial.h>
 
 #ifdef DEBUG
   #define DBG(X) X
