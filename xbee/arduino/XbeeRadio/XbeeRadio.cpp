@@ -93,7 +93,7 @@ XBeeRadioResponse& XBeeRadio::getResponse()
 }
 void XBeeRadio::send(Tx16Request &request)
 {
-	send(request, PORT);
+	send(request, DEFAULT_PORT);
 }
 
 void XBeeRadio::send(Tx16Request &request, uint8_t port)
