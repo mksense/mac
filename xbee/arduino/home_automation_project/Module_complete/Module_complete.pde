@@ -98,8 +98,7 @@ int third_Lamp = 4;  //
 
 int forth_Lamp = 5;  //
 
-int lamps_status[3] = 0;
-uint32_t lamp_Status =0;
+uint8_t lamps_status[] = {0,0,0,0};
 
 
 void setup()  
@@ -181,7 +180,9 @@ void loop()
     send_data(7, pir_Val);
     send_data(4, y_ppm_7);
     send_data(6, y_ppm_4);
-    send_data(14, lamp_Status);      
+    
+    for(int tmp = 1; tmp <= 4; tmp++)
+      send_data(14, lamp_status(tmp));      
    
   /****************************
    ***** CONTROL COMMANDS *****
@@ -199,20 +200,18 @@ void loop()
         if(lamp == 1)
         {
           digitalWrite(first_Lamp, response.getData(2));
-           lamps_status[0]=response.getData(2);    
         }else if(lamp == 2)
         {
            digitalWrite(second_Lamp, response.getData(2));
-           lamps_status[1]=response.getData(2);          
         }else if(lamp == 3)
         {
            digitalWrite(third_Lamp, response.getData(2)); 
-           lamps_status[2]=response.getData(2);           
         }else if(lamp == 4)
         {
            digitalWrite(forth_Lamp, response.getData(2)); 
-           lamps_status[3]=response.getData(2);           
         }
+       if(lamp > 0 && lamp < 5) 
+         lamps_status[lamp-1]=response.getData(2);    
       }
     }
 }
@@ -266,12 +265,14 @@ void send_data(int sensor_type, int sensor_val)
 }
 
 //Subroutine, which creates variable which stores the status of the lamps.
-void lamp_status(int i)
+uint32_t lamp_status(int i)
 {
+  uint32_t lamp_Status =0;
   lamp_Status = i;
   lamp_Status <<= 8;
-  lamp_Status = lamp(i)_Status;
+  lamp_Status = lamps_status[i-1];
   lamp_Status <<= 16;
+  return lamp_Status;
 }
 
 //Subroutine, which calculates the Parts Per Million for the Gas Sensors
