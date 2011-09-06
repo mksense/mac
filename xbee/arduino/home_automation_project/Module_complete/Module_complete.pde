@@ -35,6 +35,8 @@ unsigned long prevTime;
 unsigned long currCoPwrTimer;
 boolean CoPwrState;
 
+unsigned long timestamp = 0;
+    
 // Calculate ppm from mq4
 float Ro_4 = 80;
 float RL_4 = 10;
@@ -112,7 +114,7 @@ void setup()
   
   // setup xbee 
     xbee.begin(38400);
-    xbee.init(12);
+    xbee.init();
   
   //initialize variables 
     time = 0;
@@ -146,12 +148,19 @@ void setup()
     pinMode(forth_Lamp, OUTPUT);  //Declare forth_Lamp as OUTPOUT
     digitalWrite(forth_Lamp, LOW);  //Set forth_Lamp low, for initialisations
     
+    pinMode(13, OUTPUT);
+    
 }  // End setup
  
 
 void loop()
 {
-
+  
+  digitalWrite(13, HIGH);
+  delay(50);
+  digitalWrite(13, LOW);
+  delay(50);
+  
   /****************************
    ***** VALUES CALCULATIONS **
    ****************************/
@@ -160,8 +169,11 @@ void loop()
   ldr_Val = analogRead(ldr_Pin);  // read the value from the sensor
   
   pir_Val = digitalRead(pir_Pin); // read the value from the sensor
-  if(pir_Val == LOW){ //was motion detected
-  Serial.println("Motion Detected"); //
+  if(pir_Val == LOW)
+  {
+    //was motion detected
+    //  Serial.println("Motion Detected"); //
+  }
 
   // for mq4
   Data_4 = analogRead(SensorOutput_4);
@@ -176,13 +188,46 @@ void loop()
          }
   
     print_data();
-    send_data(1, ldr_Val);
-    send_data(7, pir_Val);
-    send_data(4, y_ppm_7);
-    send_data(6, y_ppm_4);
+
+    if(millis() - timestamp > 5000)
+    {
+//    send_data(1, ldr_Val);
+//    send_data(7, pir_Val);
+//    send_data(4, y_ppm_7);
+//    send_data(6, y_ppm_4);
+//    for(int tmp = 1; tmp <= 4; tmp++)
+//      send_data(14, lamp_status(tmp));      
+
+    xbee.send(tx,112);
+    // after sending a tx request, we expect a status response
+    // wait up to 5 seconds for the status response
+    if (xbee.readPacket(5000)) 
+    {
+        // got a response!
+
+        // should be a znet tx status            	
+    	if (xbee.getResponse().getApiId() == TX_STATUS_RESPONSE) 
+        {
+    	   xbee.getResponse().getZBTxStatusResponse(txStatus);
+    		
+    	   // get the delivery status, the fifth byte
+           if (txStatus.getStatus() == SUCCESS) 
+           {
+            	// success.  time to celebrate
+           } else 
+           {
+            	// the remote XBee did not receive our packet. is it powered on?
+           }
+        }      
+    } else 
+    {
+      // local XBee did not provide a timely TX Status Response -- should not happen
+
+    }
+    delay(100);  
     
-    for(int tmp = 1; tmp <= 4; tmp++)
-      send_data(14, lamp_status(tmp));      
+    timestamp = millis();
+    }
    
   /****************************
    ***** CONTROL COMMANDS *****
@@ -214,8 +259,12 @@ void loop()
          lamps_status[lamp-1]=response.getData(2);    
       }
     }
-}
+
 }// End loop 
+
+
+
+
 
 //Subroutine, which sends sensor's data
 void send_data(int sensor_type, int sensor_val)
@@ -235,7 +284,7 @@ void send_data(int sensor_type, int sensor_val)
     
 //    mySerial.println(ldr_Val);  // Prints the values on the extra serial (for testing purposes)
 
-    xbee.send(tx);
+    xbee.send(tx,112);
     // after sending a tx request, we expect a status response
     // wait up to 5 seconds for the status response
     if (xbee.readPacket(5000)) 
@@ -261,7 +310,7 @@ void send_data(int sensor_type, int sensor_val)
       // local XBee did not provide a timely TX Status Response -- should not happen
 
     }
-    delay(1500);  
+    delay(100);  
 }
 
 //Subroutine, which creates variable which stores the status of the lamps.
