@@ -317,6 +317,11 @@ void loop()
       digitalWrite(second_Lamp, LOW);
       digitalWrite(third_Lamp, LOW);
       digitalWrite(fourth_Lamp, LOW);
+      
+      lamps_status[0]=LOW;       
+      lamps_status[1]=LOW;       
+      lamps_status[2]=LOW;       
+      lamps_status[3]=LOW;   
     }
 
 }// End loop 
