@@ -36,7 +36,10 @@ unsigned long currCoPwrTimer;
 boolean CoPwrState;
 
 unsigned long timestamp = 0;
-    
+
+unsigned long lastTimestamp = 0;
+const int inactiveMins = 5;
+
 // Calculate ppm from mq4
 float Ro_4 = 80;
 float RL_4 = 10;
@@ -67,7 +70,7 @@ float b_7=0;
 int y_ppm_7 = 0;
 
 // Wiring for mq7
-int heating = 6;      // H1 connected to pin 6 for the heating pulse
+int heating = 10;      // H1 connected to pin 6 for the heating pulse
 int val_7 = 0;         // variable to store the read value
 int SensorOutput_7 = A3; //analog Pin connected to "out" from sensor board (CO sensor)
 int Data_7 = 0;         //analog sensor data
@@ -76,18 +79,18 @@ int flag=0;
 
 // Wiring for mq4
 int val_4 = 0;         // variable to store the read value
-int SensorOutput_4 = A4; //analog Pin connected to "out" from sensor board (CH4 sensor)
+int SensorOutput_4 = A2; //analog Pin connected to "out" from sensor board (CH4 sensor)
 int Data_4 = 0;         //analog sensor data
 
 // Wiring for Light Dependen Resistor
-int ldr_Pin = A5;       // select the input pin for the LDR
+int ldr_Pin = A1;       // select the input pin for the LDR
 int ldr_Val = 0;       // variable to store the value coming from the LIght sensor
 //float ldr_Volt = 0;
 //float ldr_R = 0;
 //uint32_t ldr_Lux = 0;
 
 // Wiring for Passise Infrared Resistor, movement sensor
-int pir_Pin = 7;      //digital pin connected to PIR sensor "out"
+int pir_Pin = 12;      //digital pin connected to PIR sensor "out"
 int pirState = LOW;  //variable to store the state of the PIR
 int pir_Val = 0;    //variable to store the read value 
 
@@ -98,7 +101,7 @@ int second_Lamp = 3;  //
 
 int third_Lamp = 4;  //
 
-int forth_Lamp = 5;  //
+int fourth_Lamp = 5;  //
 
 uint8_t lamps_status[] = {0,0,0,0};
 
@@ -137,7 +140,7 @@ void setup()
     pinMode(ldr_Pin, INPUT);  //Declare the LDR as INPUT
     
     pinMode(pir_Pin, INPUT);  //Declare the PIR sensor as INPUT
-    digitalWrite(pir_Pin, HIGH); //Enable the internal(Arduino's) pullup resistor
+//    digitalWrite(pir_Pin, HIGH); //Enable the internal(Arduino's) pullup resistor
     
     pinMode(first_Lamp, OUTPUT);  //Declare first_Lamp as OUTPOUT
     digitalWrite(first_Lamp, LOW);  //Set first_Lamp low, for initialisations
@@ -145,8 +148,8 @@ void setup()
     digitalWrite(second_Lamp, LOW);  //Set second_Lamp low, for initialisations
     pinMode(third_Lamp, OUTPUT);  //Declare third_Lamp as OUTPOUT
     digitalWrite(third_Lamp, LOW);  //Set third_Lamp low, for initialisations
-    pinMode(forth_Lamp, OUTPUT);  //Declare forth_Lamp as OUTPOUT
-    digitalWrite(forth_Lamp, LOW);  //Set forth_Lamp low, for initialisations
+    pinMode(fourth_Lamp, OUTPUT);  //Declare fourth_Lamp as OUTPOUT
+    digitalWrite(fourth_Lamp, LOW);  //Set fourth_Lamp low, for initialisations
     
     pinMode(13, OUTPUT);
     
@@ -156,10 +159,10 @@ void setup()
 void loop()
 {
   
-  digitalWrite(13, HIGH);
-  delay(50);
-  digitalWrite(13, LOW);
-  delay(50);
+//  digitalWrite(13, HIGH);
+//  delay(50);
+//  digitalWrite(13, LOW);
+//  delay(50);
   
   /****************************
    ***** VALUES CALCULATIONS **
@@ -168,12 +171,34 @@ void loop()
    // for light sensor
   ldr_Val = analogRead(ldr_Pin);  // read the value from the sensor
   
-  pir_Val = digitalRead(pir_Pin); // read the value from the sensor
-  if(pir_Val == LOW)
+  static unsigned long pirTimestamp = 0;
+  if(millis() - pirTimestamp > 500)
   {
-    //was motion detected
-    //  Serial.println("Motion Detected"); //
+    
+    int newPirVal = digitalRead(pir_Pin); // read the value from the sensor
+    if(newPirVal != pir_Val)
+    {
+//      send_data(7, newPirVal);
+      payload[1] = 7;
+      payload[2] = !newPirVal;
+      payload[3] = !newPirVal;
+      payload[4] = !newPirVal;
+      payload[5] = !newPirVal;
+      send_data();
+
+    }
+    pir_Val = newPirVal;
+    pirTimestamp = millis();
+//    digitalWrite(13, newPirVal);
+//    delay(100);
+//    digitalWrite(13,LOW);
+//    delay(100);
   }
+//  if(pir_Val == LOW)
+//  {
+//    //was motion detected
+//    //  Serial.println("Motion Detected"); //
+//  }
 
   // for mq4
   Data_4 = analogRead(SensorOutput_4);
@@ -191,40 +216,53 @@ void loop()
 
     if(millis() - timestamp > 5000)
     {
-//    send_data(1, ldr_Val);
+    send_data(1, ldr_Val);
 //    send_data(7, pir_Val);
-//    send_data(4, y_ppm_7);
-//    send_data(6, y_ppm_4);
-//    for(int tmp = 1; tmp <= 4; tmp++)
-//      send_data(14, lamp_status(tmp));      
-
-    xbee.send(tx,112);
-    // after sending a tx request, we expect a status response
-    // wait up to 5 seconds for the status response
-    if (xbee.readPacket(5000)) 
+    
+    payload[1] = 7;
+    payload[2] = !pir_Val;
+    payload[3] = !pir_Val;
+    payload[4] = !pir_Val;
+    payload[5] = !pir_Val;
+    send_data();
+    
+    send_data(4, y_ppm_7);
+    send_data(6, y_ppm_4);
+    for(int tmp = 1; tmp <= 4; tmp++)
     {
-        // got a response!
+      payload[1] = 14;
+      payload[2] = tmp;
+      payload[3] = lamps_status[tmp-1];
+      send_data();
+    }    
 
-        // should be a znet tx status            	
-    	if (xbee.getResponse().getApiId() == TX_STATUS_RESPONSE) 
-        {
-    	   xbee.getResponse().getZBTxStatusResponse(txStatus);
-    		
-    	   // get the delivery status, the fifth byte
-           if (txStatus.getStatus() == SUCCESS) 
-           {
-            	// success.  time to celebrate
-           } else 
-           {
-            	// the remote XBee did not receive our packet. is it powered on?
-           }
-        }      
-    } else 
-    {
-      // local XBee did not provide a timely TX Status Response -- should not happen
-
-    }
-    delay(100);  
+//    xbee.send(tx,112);
+//    // after sending a tx request, we expect a status response
+//    // wait up to 5 seconds for the status response
+//    if (xbee.readPacket(5000)) 
+//    {
+//        // got a response!
+//
+//        // should be a znet tx status            	
+//    	if (xbee.getResponse().getApiId() == TX_STATUS_RESPONSE) 
+//        {
+//    	   xbee.getResponse().getZBTxStatusResponse(txStatus);
+//    		
+//    	   // get the delivery status, the fifth byte
+//           if (txStatus.getStatus() == SUCCESS) 
+//           {
+//            	// success.  time to celebrate
+//           } else 
+//           {
+//            	// the remote XBee did not receive our packet. is it powered on?
+//           }
+//        }      
+//    } else 
+//    {
+//      // local XBee did not provide a timely TX Status Response -- should not happen
+//
+//    }
+//    delay(100);  
     
     timestamp = millis();
     }
@@ -240,6 +278,7 @@ void loop()
 	  data = response.getData(0);
       if(data == 1)
       {
+        lastTimestamp = millis();
         //flashLed(statusLed, 3, 30);
         int lamp = response.getData(1);
         if(lamp == 1)
@@ -253,11 +292,31 @@ void loop()
            digitalWrite(third_Lamp, response.getData(2)); 
         }else if(lamp == 4)
         {
-           digitalWrite(forth_Lamp, response.getData(2)); 
+           digitalWrite(fourth_Lamp, response.getData(2)); 
+        }
+        else if(lamp == 0xff)
+        {
+          digitalWrite(first_Lamp, response.getData(2));
+          digitalWrite(second_Lamp, response.getData(2));
+          digitalWrite(third_Lamp, response.getData(2)); 
+          digitalWrite(fourth_Lamp, response.getData(2));
+       
+          lamps_status[0]=response.getData(2);       
+          lamps_status[1]=response.getData(2);       
+          lamps_status[2]=response.getData(2);       
+          lamps_status[3]=response.getData(2);       
         }
        if(lamp > 0 && lamp < 5) 
          lamps_status[lamp-1]=response.getData(2);    
       }
+    }
+    
+        if(millis() - lastTimestamp > inactiveMins * 60000)
+    {
+      digitalWrite(first_Lamp, LOW);
+      digitalWrite(second_Lamp, LOW);
+      digitalWrite(third_Lamp, LOW);
+      digitalWrite(fourth_Lamp, LOW);
     }
 
 }// End loop 
@@ -283,7 +342,12 @@ void send_data(int sensor_type, int sensor_val)
     payload[5] = 0; //*bla_pointer;
     
 //    mySerial.println(ldr_Val);  // Prints the values on the extra serial (for testing purposes)
+    send_data();
 
+}
+
+void send_data(void)
+{
     xbee.send(tx,112);
     // after sending a tx request, we expect a status response
     // wait up to 5 seconds for the status response
@@ -311,17 +375,6 @@ void send_data(int sensor_type, int sensor_val)
 
     }
     delay(100);  
-}
-
-//Subroutine, which creates variable which stores the status of the lamps.
-uint32_t lamp_status(int i)
-{
-  uint32_t lamp_Status =0;
-  lamp_Status = i;
-  lamp_Status <<= 8;
-  lamp_Status = lamps_status[i-1];
-  lamp_Status <<= 16;
-  return lamp_Status;
 }
 
 //Subroutine, which calculates the Parts Per Million for the Gas Sensors
