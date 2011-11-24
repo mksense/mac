@@ -67,6 +67,20 @@ bool XBeeRadio::checkForData(uint8_t lp1,uint8_t lp2,uint8_t port)
 			return true;
 		else if(port_validity == PROGRAMMING_PORT)
 		{
+			pinMode(LED_PIN, OUTPUT);
+			digitalWrite(LED_PIN, HIGH);
+			delay(200);
+			digitalWrite(LED_PIN, LOW);
+			delay(200);
+			digitalWrite(LED_PIN, HIGH);
+			delay(200);
+			digitalWrite(LED_PIN, LOW);
+			delay(200);
+			digitalWrite(LED_PIN, HIGH);
+			delay(200);
+			digitalWrite(LED_PIN, LOW);
+			delay(200);
+			
 			Rx16Response rx = Rx16Response();
 			this->getResponse().getRx16Response(rx);
 	        uint16_t sender = rx.getRemoteAddress16();
@@ -168,6 +182,8 @@ uint8_t XBeeRadio::init(/*NewSoftSerial mySerial*/void)
 	
 	myValue[0] = buffer[0];
 	myValue[1] = buffer[1];
+	
+	myValue[0] &= 0x0f;
 
 	// mySerial.print("My address should be: ");
 	// mySerial.print(myValue[0], HEX);
@@ -333,6 +349,8 @@ void XBeeRadio::getReadyForProgramming(uint16_t programmer_address)
 	
 	myValue[0] = buffer[0];
 	myValue[1] = buffer[1];
+
+	myValue[0] &= 0x0f;
 
 	// mySerial.print("My address should be: ");
 	// mySerial.print(myValue[0], HEX);
