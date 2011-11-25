@@ -100,12 +100,7 @@ void setup()
   
 }
 
-void checkLights(void)
-{
-  
-}
-
-void checkSensors(void)
+void checkLamps(void)
 {
   const int inactiveMins = 5;
   static unsigned long lastTimestamp = 0;
@@ -127,13 +122,18 @@ void checkSensors(void)
   }
     
   if(millis() - lastTimestamp > inactiveMins * 60000)
-    setAllLamps(LOW);
+    setAllLamps(LOW);  
+}
+
+void checkSensors(void)
+{
+
 }
 
 void loop()
 {
   if(numOfRelays)
-    checkLights();
+    checkLamps();
     
   if(sensorsExist)
     checkSensors();
