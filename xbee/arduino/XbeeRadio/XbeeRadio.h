@@ -47,6 +47,8 @@ public:
 	void send(Tx16Request &request);
 	void send(Tx16Request &request, uint8_t port);
 	void send(AtCommandRequest);
+	bool sendAndCheck(Tx16Request &request);
+	bool sendAndCheck(Tx16Request &request, uint8_t port);
 	void sendAtCommand(uint8_t command[], uint8_t reply[]);
 	void sendAtCommand(uint8_t command[], uint8_t value[], uint8_t length);
 	uint8_t init(/*NewSoftSerial mySerial*/void);

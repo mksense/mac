@@ -141,6 +141,45 @@ void XBeeRadio::send(AtCommandRequest request)
 {
 	XBee::send(request);
 }
+
+bool XBeeRadio::sendAndCheck(Tx16Request &request)
+{
+	return sendAndCheck(request, DEFAULT_PORT);
+}
+
+bool XBeeRadio::sendAndCheck(Tx16Request &request, uint8_t port)
+{
+	bool retVal = false;
+	send(request, port);
+	TxStatusResponse txStatus = TxStatusResponse();
+	
+	 // after sending a tx request, we expect a status response
+    // wait up to 5 seconds for the status response
+    if (readPacket(5000))
+    {
+        // got a response! should be a znet tx status            	
+    	if (getResponse().getApiId() == TX_STATUS_RESPONSE)
+        {
+    	   getResponse().getZBTxStatusResponse(txStatus);
+
+    	   // get the delivery status, the fifth byte
+           if (txStatus.getStatus() == SUCCESS)
+           {
+            	// success.  time to celebrate
+				retVal = true;
+           } 
+           else
+           {
+            	// the remote XBee did not receive our packet. is it powered on?
+           }
+        }      
+    }
+    else
+    {
+      // local XBee did not provide a timely TX Status Response -- should not happen
+    }
+}
+
 uint8_t XBeeRadio::init(/*NewSoftSerial mySerial*/void)
 {
 	pinMode(LED_PIN, OUTPUT);
