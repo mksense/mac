@@ -130,7 +130,7 @@ void checkLamps(void)
       int value = response.getData(2);
       if(lamp > 0 && lamp <= numOfRelays)
       {
-        setLamp(lampPins[lamp-1], value);
+        setLamp(lamp-1, value);
         reportLamp(lamp-1);
       }
       else if(lamp == 0xff)
