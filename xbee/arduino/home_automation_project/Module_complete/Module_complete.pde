@@ -74,7 +74,7 @@ void reportLamp(int lamp)
 {
     payload[1] = 14;
     payload[2] = lamp+1;
-    payload[3] = lampPins[lamp];
+    payload[3] = lampStatuses[lamp];
     send_data();
 }
 
