@@ -11,12 +11,9 @@ XBeeRadio xbee = XBeeRadio();
 
 // Create reusable response objects for responses we expect to handle 
 XBeeRadioResponse response = XBeeRadioResponse();  
-uint8_t data = 0;
 
 // Allocate two bytes for to hold a 32-bit analog reading
 uint8_t payload[] = { 102, 0,  0, 0, 0, 0};
-
-// With Series 1 you can use either 16-bit or 64-bit addressing
 
 // 16-bit addressing: Enter address of remote XBee, typically the coordinator
 Tx16Request tx = Tx16Request(0xffff, payload, sizeof(payload));
@@ -71,11 +68,29 @@ void setAllLamps(int value)
 {
   for(int i = 0; i < numOfRelays ; i++)
     setLamp(i, value);
-
 }
+
+void reportLamp(int lamp)
+{
+    payload[1] = 14;
+    payload[2] = lamp+1;
+    payload[3] = lampPins[lamp];
+    send_data();
+}
+
+void reportAllLamps(void)
+{
+  for(int i = 0; i < numOfRelays; i++)
+    reportLamp(i);
+}
+
 void setup()
 {
-  Serial.begin(9600);
+  
+  xbee.initialize_xbee_module();
+  // setup xbee 
+  xbee.begin(38400);
+  xbee.init();
 
   numOfRelays = getNumOfRelays();
   for(int i=0; i< numOfRelays; i++)
@@ -108,21 +123,37 @@ void checkLamps(void)
   {
 
     xbee.getResponse(response);
-    data = response.getData(0);
-    if(data == 1)
+    if(response.getData(0) == 1)
     {
       lastTimestamp = millis();
       int lamp = response.getData(1);
       int value = response.getData(2);
       if(lamp > 0 && lamp <= numOfRelays)
+      {
         setLamp(lampPins[lamp-1], value);
+        reportLamp(lamp-1);
+      }
       else if(lamp == 0xff)
-        setAllLamps(value);   
+      {
+        setAllLamps(value);
+        reportAllLamps();
+      }
     }
   }
     
   if(millis() - lastTimestamp > inactiveMins * 60000)
-    setAllLamps(LOW);  
+  {
+    setAllLamps(LOW);
+    reportAllLamps();
+  }
+  
+  static unsigned long reportTimestamp = 0;
+  if(millis() - reportTimestamp > 60000)
+  {
+    reportAllLamps();
+    reportTimestamp = millis();
+  }
+  
 }
 
 void checkSensors(void)
@@ -138,6 +169,34 @@ void loop()
   if(sensorsExist)
     checkSensors();
 }
+
+//Subroutine, which sends sensor's data
+void send_data(int sensor_type, int sensor_val)
+{
+      // initialize bla_pointer pointer for reading 32 bit sensors values
+    uint8_t * bla_pointer;
+       
+    payload[1] = sensor_type;
+    bla_pointer = (uint8_t*) &sensor_val; //ldr_val
+    payload[2] = *bla_pointer;
+    bla_pointer++;
+    payload[3] = *bla_pointer;
+    bla_pointer++;
+    payload[4] = 0; //*bla_pointer;
+    bla_pointer++;
+    payload[5] = 0; //*bla_pointer;
+    
+//    mySerial.println(ldr_Val);  // Prints the values on the extra serial (for testing purposes)
+    send_data();
+
+}
+
+void send_data(void)
+{
+    xbee.send(tx,112);
+    delay(100);  
+}
+
 
 
 //// Define the variables that will be used
