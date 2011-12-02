@@ -37,6 +37,81 @@ uint8_t methanePin = A2;
 uint8_t carbonPin = A3;
 bool sensorsExist = false;
 
+uint8_t pirStatus;
+uint8_t securityStatus;
+int tempValue=0;
+int lightValue=0;
+int methaneValue=0;
+int carbonValue=0;
+
+void setup()
+{
+  
+  xbee.initialize_xbee_module();
+  // setup xbee 
+  xbee.begin(38400);
+  xbee.init();
+
+//  numOfRelays = getNumOfRelays();
+  numOfRelays = 4;
+  for(int i=0; i< numOfRelays; i++)
+  {
+    pinMode(lampPins[i], OUTPUT);   
+    setLamp(i, LOW);
+  }
+  
+  pinMode(sensorsCheckPin, INPUT);
+  digitalWrite(sensorsCheckPin, HIGH);
+  sensorsExist = !digitalRead(sensorsCheckPin);
+  sensorsExist = true;
+  
+  if(sensorsExist)
+  {
+    pinMode(pirPin, INPUT);
+    pinMode(heaterPin, OUTPUT);
+    pinMode(securityPin, INPUT);
+    digitalWrite(securityPin, HIGH);
+  }
+  
+  pinMode(ledPin, OUTPUT);
+  
+}
+
+void loop()
+{
+  if(numOfRelays)
+    checkLamps();
+    
+  if(sensorsExist)
+    checkSensors();
+}
+
+//Subroutine, which sends sensor's data
+void send_data(int sensor_type, int sensor_val)
+{
+      // initialize bla_pointer pointer for reading 32 bit sensors values
+    uint8_t * bla_pointer;
+       
+    payload[1] = sensor_type;
+    bla_pointer = (uint8_t*) &sensor_val; //ldr_val
+    payload[2] = *bla_pointer;
+    bla_pointer++;
+    payload[3] = *bla_pointer;
+    bla_pointer++;
+    payload[4] = 0; //*bla_pointer;
+    bla_pointer++;
+    payload[5] = 0; //*bla_pointer;
+    
+//    mySerial.println(ldr_Val);  // Prints the values on the extra serial (for testing purposes)
+    send_data();
+
+}
+
+void send_data(void)
+{
+    xbee.sendAndCheck(tx,112);
+    delay(100);  
+}
 
 uint8_t getNumOfRelays(void)
 {
@@ -56,63 +131,6 @@ uint8_t getNumOfRelays(void)
     if(distance[i] < distance[i-1]) relNum = i;
   
   return relNum;
-}
-
-void setLamp(int lamp, int value)
-{
-  lampStatuses[lamp] = value;
-  digitalWrite(lampPins[lamp], lampStatuses[lamp]);
-}
-
-void setAllLamps(int value)
-{
-  for(int i = 0; i < numOfRelays ; i++)
-    setLamp(i, value);
-}
-
-void reportLamp(int lamp)
-{
-    payload[1] = 14;
-    payload[2] = lamp+1;
-    payload[3] = lampStatuses[lamp];
-    send_data();
-}
-
-void reportAllLamps(void)
-{
-  for(int i = 0; i < numOfRelays; i++)
-    reportLamp(i);
-}
-
-void setup()
-{
-  
-  xbee.initialize_xbee_module();
-  // setup xbee 
-  xbee.begin(38400);
-  xbee.init();
-
-  numOfRelays = getNumOfRelays();
-  for(int i=0; i< numOfRelays; i++)
-  {
-    pinMode(lampPins[i], OUTPUT);   
-    setLamp(i, LOW);
-  }
-  
-  pinMode(sensorsCheckPin, INPUT);
-  digitalWrite(sensorsCheckPin, HIGH);
-  sensorsExist = !digitalRead(sensorsCheckPin);
-  
-  if(sensorsExist)
-  {
-    pinMode(pirPin, INPUT);
-    pinMode(heaterPin, OUTPUT);
-    pinMode(securityPin, INPUT);
-    digitalWrite(securityPin, HIGH);
-  }
-  
-  pinMode(ledPin, OUTPUT);
-  
 }
 
 void checkLamps(void)
@@ -156,48 +174,108 @@ void checkLamps(void)
   
 }
 
+void setLamp(int lamp, int value)
+{
+  lampStatuses[lamp] = value;
+  digitalWrite(lampPins[lamp], lampStatuses[lamp]);
+}
+
+void setAllLamps(int value)
+{
+  for(int i = 0; i < numOfRelays ; i++)
+    setLamp(i, value);
+}
+
+void reportLamp(int lamp)
+{
+    payload[1] = 14;
+    payload[2] = lamp+1;
+    payload[3] = lampStatuses[lamp];
+    send_data();
+}
+
+void reportAllLamps(void)
+{
+  for(int i = 0; i < numOfRelays; i++)
+    reportLamp(i);
+}
+
 void checkSensors(void)
 {
-
+  checkPir();
+  checkLight();
+  checkTemp();
+  checkMethane();
 }
 
-void loop()
+void checkPir(void)
 {
-  if(numOfRelays)
-    checkLamps();
+  static unsigned long pirTimestamp = 0;
+  if(millis() - pirTimestamp > 500)
+  {
     
-  if(sensorsExist)
-    checkSensors();
+    int newPirStatus = digitalRead(pirPin); // read the value from the sensor
+    if(newPirStatus != pirStatus)
+    {
+//      send_data(7, newPirStatus);
+      payload[1] = 7;
+      payload[2] = !newPirStatus;
+      payload[3] = !newPirStatus;
+      payload[4] = !newPirStatus;
+      payload[5] = !newPirStatus;
+      send_data();
+
+    }
+    pirStatus = newPirStatus;
+    pirTimestamp = millis();
+  }
 }
 
-//Subroutine, which sends sensor's data
-void send_data(int sensor_type, int sensor_val)
+void checkLight(void)
 {
-      // initialize bla_pointer pointer for reading 32 bit sensors values
-    uint8_t * bla_pointer;
-       
-    payload[1] = sensor_type;
-    bla_pointer = (uint8_t*) &sensor_val; //ldr_val
-    payload[2] = *bla_pointer;
-    bla_pointer++;
-    payload[3] = *bla_pointer;
-    bla_pointer++;
-    payload[4] = 0; //*bla_pointer;
-    bla_pointer++;
-    payload[5] = 0; //*bla_pointer;
-    
-//    mySerial.println(ldr_Val);  // Prints the values on the extra serial (for testing purposes)
-    send_data();
+   // for light sensor
 
+  static unsigned long lightTimestamp = 0;
+  if(millis() - lightTimestamp > 3 * 60000)
+  {
+    lightValue = analogRead(lightPin);  // read the value from the sensor
+    send_data(1, lightValue);
+    lightTimestamp = millis();
+  }
+  
 }
 
-void send_data(void)
+void checkTemp(void)
 {
-    xbee.send(tx,112);
-    delay(100);  
+   // for temp sensor
+
+  static unsigned long tempTimestamp = 0;
+  if(millis() - tempTimestamp > 3 * 60000)
+  {
+    uint8_t value = analogRead(tempPin);  // read the value from the sensor
+    tempValue = map(value, 0, 1024, 0, 5000)/10;  
+    payload[1] = 16;
+    payload[2] = tempValue;
+    payload[3] = tempValue;
+    payload[4] = tempValue;
+    payload[5] = tempValue;
+    send_data(16, tempValue);
+    tempTimestamp = millis();
+  }
 }
 
+void checkMethane(void)
+{
+   // for temp sensor
 
+  static unsigned long methaneTimestamp = 0;
+  if(millis() - methaneTimestamp > 3 * 60000)
+  {
+    methaneValue = analogRead(methanePin);  // read the value from the sensor
+    send_data(6, methaneValue);
+    methaneTimestamp = millis();
+  }
+}
 
 //// Define the variables that will be used
 //unsigned long time;
