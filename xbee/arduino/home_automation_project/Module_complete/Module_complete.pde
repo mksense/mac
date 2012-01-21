@@ -51,19 +51,22 @@ void setup()
   // setup xbee 
   xbee.begin(38400);
   xbee.init();
+  
+  pinMode(ledPin, OUTPUT);
 
-//  numOfRelays = getNumOfRelays();
-  numOfRelays = 4;
+  numOfRelays = getNumOfRelays();
   for(int i=0; i< numOfRelays; i++)
   {
     pinMode(lampPins[i], OUTPUT);   
     setLamp(i, LOW);
   }
+  delay(1000);
+  blinkLED(numOfRelays, 200*numOfRelays);
+  delay(1000);
   
   pinMode(sensorsCheckPin, INPUT);
   digitalWrite(sensorsCheckPin, HIGH);
   sensorsExist = !digitalRead(sensorsCheckPin);
-  sensorsExist = true;
   
   if(sensorsExist)
   {
@@ -71,14 +74,19 @@ void setup()
     pinMode(heaterPin, OUTPUT);
     pinMode(securityPin, INPUT);
     digitalWrite(securityPin, HIGH);
-  }
-  
-  pinMode(ledPin, OUTPUT);
-  
+    blinkLED(1, 500);
+  } 
 }
 
 void loop()
 {
+  static unsigned long ledTimestamp = 0;
+  if(millis() - ledTimestamp > 5000)
+  {
+    blinkLED(1,100);
+    ledTimestamp = millis();
+  }
+  
   if(numOfRelays)
     checkLamps();
     
@@ -122,9 +130,9 @@ uint8_t getNumOfRelays(void)
   for(int i = 0; i< 6; i++)
   {
     thresholds[i] < value? distance[i] = value - thresholds[i] : distance[i] = thresholds[i] - value;
-    Serial.print(thresholds[i], DEC);
-    Serial.print("\t");
-    Serial.println(distance[i], DEC);
+//    Serial.print(thresholds[i], DEC);
+//    Serial.print("\t");
+//    Serial.println(distance[i], DEC);
   }
     
   for(int i = 1; i< 6; i++)
@@ -156,6 +164,7 @@ void checkLamps(void)
         setAllLamps(value);
         reportAllLamps();
       }
+      blinkLED(2,100);
     }
   }
     
@@ -163,6 +172,7 @@ void checkLamps(void)
   {
     setAllLamps(LOW);
     reportAllLamps();
+    lastTimestamp = millis();
   }
   
   static unsigned long reportTimestamp = 0;
@@ -274,6 +284,17 @@ void checkMethane(void)
     methaneValue = analogRead(methanePin);  // read the value from the sensor
     send_data(6, methaneValue);
     methaneTimestamp = millis();
+  }
+}
+
+void blinkLED(int times, int milliseconds)
+{
+  for(int i = 0; i < times; i++)
+  {
+    digitalWrite(ledPin, HIGH);
+    delay(milliseconds/times/2);
+    digitalWrite(ledPin, LOW);
+    delay(milliseconds/times/2);
   }
 }
 
