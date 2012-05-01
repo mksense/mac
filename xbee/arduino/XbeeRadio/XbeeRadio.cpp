@@ -3,7 +3,6 @@ XBeeRadio.h - Library for communicating with heterogenous 802.15.4 networks.
 	Created by Vasileios Georgitzikis, November 23, 2010.
 */
 
-#include "WProgram.h"
 #include "XbeeRadio.h"
 
 //XBeeRadioResponse::XBeeRadioResponse() : XBeeResponse(){}

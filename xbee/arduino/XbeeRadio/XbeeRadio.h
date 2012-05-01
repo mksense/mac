@@ -7,7 +7,7 @@
 #define XbeeRadio_h
 
 #include <Xbee.h>
-#include "WProgram.h"
+#include "Arduino.h"
 
 #ifdef DEBUG
   #define DBG(X) X

@@ -1,10 +1,10 @@
-#include <NewSoftSerial.h>
 #include <XbeeRadio.h>
 #include <XBee.h>
 #include <stdio.h>
 #include <string.h>
+#include <SoftwareSerial.h>
 
-//NewSoftSerial mySerial(2, 3);
+//SoftwareSerial mySerial(2, 3);
 
 // Create the xbee object
 XBeeRadio xbee = XBeeRadio(); 
@@ -13,18 +13,23 @@ XBeeRadio xbee = XBeeRadio();
 XBeeRadioResponse response = XBeeRadioResponse();  
 
 // Allocate two bytes for to hold a 32-bit analog reading
-uint8_t payload[] = { 102, 0,  0, 0, 0, 0};
+uint8_t payload[] = { 
+  102, 0,  0, 0, 0, 0};
 
 // 16-bit addressing: Enter address of remote XBee, typically the coordinator
 Tx16Request tx = Tx16Request(0xffff, payload, sizeof(payload));
 
+uint8_t tmpPayload[20];
+Tx16Request tmpTx = Tx16Request(0xffff, tmpPayload, sizeof(tmpPayload)); 
+
 TxStatusResponse txStatus = TxStatusResponse();
 
-uint8_t lampPins[] = {2, 3, 4, 5};
+uint8_t lampPins[] = { 2, 3, 4, 5, 6};
 uint8_t relayCheckPin = A4;
 uint8_t numOfRelays = 0;
 
-uint8_t lampStatuses[5] = {0, 0, 0, 0};
+uint8_t lampStatuses[5] = {
+  0, 0, 0, 0, 0};
 
 uint8_t pirPin = 9;
 uint8_t heaterPin = 10;
@@ -46,12 +51,12 @@ int carbonValue=0;
 
 void setup()
 {
-  
+
   xbee.initialize_xbee_module();
   // setup xbee 
   xbee.begin(38400);
   xbee.init();
-  
+
   pinMode(ledPin, OUTPUT);
 
   numOfRelays = getNumOfRelays();
@@ -63,19 +68,22 @@ void setup()
   delay(1000);
   blinkLED(numOfRelays, 200*numOfRelays);
   delay(1000);
-  
+
   pinMode(sensorsCheckPin, INPUT);
   digitalWrite(sensorsCheckPin, HIGH);
   sensorsExist = !digitalRead(sensorsCheckPin);
-  
+
   if(sensorsExist)
   {
     pinMode(pirPin, INPUT);
+    digitalWrite(pirPin, HIGH);
     pinMode(heaterPin, OUTPUT);
     pinMode(securityPin, INPUT);
     digitalWrite(securityPin, HIGH);
     blinkLED(1, 500);
   } 
+
+    sendCapabilities();
 }
 
 void loop()
@@ -86,58 +94,113 @@ void loop()
     blinkLED(1,100);
     ledTimestamp = millis();
   }
-  
+
   if(numOfRelays)
     checkLamps();
-    
+
   if(sensorsExist)
     checkSensors();
+    
+  static unsigned long capabTimestamp = 0;
+  if(millis() - capabTimestamp > 60000)
+  {
+    digitalWrite(13, HIGH);
+    sendCapabilities();
+    digitalWrite(13, LOW);
+    delay(100);
+    capabTimestamp = millis();
+  }
 }
 
 //Subroutine, which sends sensor's data
 void send_data(int sensor_type, int sensor_val)
 {
-      // initialize bla_pointer pointer for reading 32 bit sensors values
-    uint8_t * bla_pointer;
-       
-    payload[1] = sensor_type;
-    bla_pointer = (uint8_t*) &sensor_val; //ldr_val
-    payload[2] = *bla_pointer;
-    bla_pointer++;
-    payload[3] = *bla_pointer;
-    bla_pointer++;
-    payload[4] = 0; //*bla_pointer;
-    bla_pointer++;
-    payload[5] = 0; //*bla_pointer;
-    
-//    mySerial.println(ldr_Val);  // Prints the values on the extra serial (for testing purposes)
-    send_data();
+  // initialize bla_pointer pointer for reading 32 bit sensors values
+  uint8_t * bla_pointer;
+
+  payload[1] = sensor_type;
+  bla_pointer = (uint8_t*) &sensor_val; //ldr_val
+  payload[2] = *bla_pointer;
+  bla_pointer++;
+  payload[3] = *bla_pointer;
+  bla_pointer++;
+  payload[4] = 0; //*bla_pointer;
+  bla_pointer++;
+  payload[5] = 0; //*bla_pointer;
+
+  //    mySerial.println(ldr_Val);  // Prints the values on the extra serial (for testing purposes)
+  send_data();
 
 }
 
 void send_data(void)
 {
-    xbee.sendAndCheck(tx,112);
-    delay(100);  
+  xbee.sendAndCheck(tx,112);
+  delay(100);  
+}
+
+void sendCapabilities(void)
+{
+  int messageSize = 3;
+  messageSize += numOfRelays;
+  if(sensorsExist)
+    messageSize += 4;
+  tmpPayload[0] = 102;
+  tmpPayload[1] = 100;
+  tmpPayload[2] = messageSize - 3;
+  int count = 3;
+  for(int i = 0; i < numOfRelays; i++)
+  {
+    tmpPayload[count++] = 14;
+  }
+  
+  if(sensorsExist)
+  {
+    tmpPayload[count++] = 1;
+    tmpPayload[count++] = 6;
+    tmpPayload[count++] = 7;
+    tmpPayload[count++] = 16;
+  }
+
+  xbee.sendAndCheck(tmpTx,112);  
 }
 
 uint8_t getNumOfRelays(void)
 {
+  uint8_t relays[] ={0, 0, 0, 0, 0, 0};
+  for(int i = 0; i < 10; i++)
+  {
+    relays[getNumOfRels()]++;
+  }
+  int num = 0;
+  
+  for(int i = 1 ; i < 6; i++)
+  {
+    if(relays[i] > relays[i-1])
+      num = i;
+  }
+  return num;
+}
+
+uint8_t getNumOfRels(void)
+{
   int value = analogRead(relayCheckPin);
+  delay(10);
   int relNum = 0;
   int distance[5];
-  int thresholds[] = {0, 342, 512, 614, 683, 732 };
+  int thresholds[] = {
+    0, 342, 512, 614, 683, 732   };
   for(int i = 0; i< 6; i++)
   {
     thresholds[i] < value? distance[i] = value - thresholds[i] : distance[i] = thresholds[i] - value;
-//    Serial.print(thresholds[i], DEC);
-//    Serial.print("\t");
-//    Serial.println(distance[i], DEC);
+    //    Serial.print(thresholds[i], DEC);
+    //    Serial.print("\t");
+    //    Serial.println(distance[i], DEC);
   }
-    
+
   for(int i = 1; i< 6; i++)
     if(distance[i] < distance[i-1]) relNum = i;
-  
+
   return relNum;
 }
 
@@ -167,21 +230,21 @@ void checkLamps(void)
       blinkLED(2,100);
     }
   }
-    
+
   if(millis() - lastTimestamp > inactiveMins * 60000)
   {
     setAllLamps(LOW);
     reportAllLamps();
     lastTimestamp = millis();
   }
-  
+
   static unsigned long reportTimestamp = 0;
   if(millis() - reportTimestamp > 60000)
   {
     reportAllLamps();
     reportTimestamp = millis();
   }
-  
+
 }
 
 void setLamp(int lamp, int value)
@@ -198,10 +261,10 @@ void setAllLamps(int value)
 
 void reportLamp(int lamp)
 {
-    payload[1] = 14;
-    payload[2] = lamp+1;
-    payload[3] = lampStatuses[lamp];
-    send_data();
+  payload[1] = 14;
+  payload[2] = lamp+1;
+  payload[3] = lampStatuses[lamp];
+  send_data();
 }
 
 void reportAllLamps(void)
@@ -223,17 +286,22 @@ void checkPir(void)
   static unsigned long pirTimestamp = 0;
   if(millis() - pirTimestamp > 500)
   {
-    
+
     int newPirStatus = digitalRead(pirPin); // read the value from the sensor
-    if(newPirStatus != pirStatus)
+    if(newPirStatus != pirStatus || !newPirStatus)
     {
-//      send_data(7, newPirStatus);
+      //      send_data(7, newPirStatus);
       payload[1] = 7;
       payload[2] = !newPirStatus;
       payload[3] = !newPirStatus;
       payload[4] = !newPirStatus;
       payload[5] = !newPirStatus;
       send_data();
+      if(newPirStatus)
+      {
+        send_data();
+        send_data();
+      }
 
     }
     pirStatus = newPirStatus;
@@ -243,7 +311,7 @@ void checkPir(void)
 
 void checkLight(void)
 {
-   // for light sensor
+  // for light sensor
 
   static unsigned long lightTimestamp = 0;
   if(millis() - lightTimestamp > 3 * 60000)
@@ -252,12 +320,12 @@ void checkLight(void)
     send_data(1, lightValue);
     lightTimestamp = millis();
   }
-  
+
 }
 
 void checkTemp(void)
 {
-   // for temp sensor
+  // for temp sensor
 
   static unsigned long tempTimestamp = 0;
   if(millis() - tempTimestamp > 3 * 60000)
@@ -276,7 +344,7 @@ void checkTemp(void)
 
 void checkMethane(void)
 {
-   // for temp sensor
+  // for temp sensor
 
   static unsigned long methaneTimestamp = 0;
   if(millis() - methaneTimestamp > 3 * 60000)
@@ -714,3 +782,4 @@ void blinkLED(int times, int milliseconds)
 //
 //  return outstr;
 //}
+
