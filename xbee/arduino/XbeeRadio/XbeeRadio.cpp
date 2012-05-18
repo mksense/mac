@@ -214,6 +214,8 @@ uint8_t XBeeRadio::init(/*NewSoftSerial mySerial*/void)
 	sendAtCommand(slCmd, buffer);
 	
 //set MY	
+	buffer[0] &= 0x0f;
+
 	myAddress = buffer[1];
 	myAddress <<= 8;
 	myAddress += buffer[0];
@@ -221,8 +223,6 @@ uint8_t XBeeRadio::init(/*NewSoftSerial mySerial*/void)
 	myValue[0] = buffer[0];
 	myValue[1] = buffer[1];
 	
-	myValue[0] &= 0x0f;
-
 	// mySerial.print("My address should be: ");
 	// mySerial.print(myValue[0], HEX);
 	// mySerial.println(myValue[1], HEX);
@@ -381,14 +381,13 @@ void XBeeRadio::getReadyForProgramming(uint16_t programmer_address)
 	sendAtCommand(slCmd, buffer);
 	
 //set MY	
+	buffer[0] &= 0x0f;
 	myAddress = buffer[1];
 	myAddress <<= 8;
 	myAddress += buffer[0];
 	
 	myValue[0] = buffer[0];
 	myValue[1] = buffer[1];
-
-	myValue[0] &= 0x0f;
 
 	// mySerial.print("My address should be: ");
 	// mySerial.print(myValue[0], HEX);
