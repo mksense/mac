@@ -57,8 +57,6 @@ void setup()
   delay(1000);
   uber.blinkLED(numOfRelays, 200*numOfRelays);
   delay(1000);
-  
-//  setupSenors();
 
   sendCapabilities();
 }
@@ -70,9 +68,6 @@ void loop()
   if(numOfRelays)
     checkLamps();
 
-//  if(sensorsExist)
-//    checkSensors();
-    
   periodicCapabilities();
 }
 
@@ -105,14 +100,6 @@ void sendCapabilities(void)
   {
     uber.sendValue("report", String(ZONE_NAME)+(i+1));
   }
-  
-//  if(sensorsExist)
-//  {
-//    uber.sendValue("report", "light");    
-//    uber.sendValue("report", "temperature");    
-//    uber.sendValue("report", "pir");    
-//    uber.sendValue("report", "ch4");    
-//  }
 
 }
 
@@ -125,45 +112,6 @@ void setupRelays(void)
     setLamp(i, LOW);
   }
 }
-
-//uint8_t getNumOfRelays(void)
-//{
-//  uint8_t relays[] ={0, 0, 0, 0, 0, 0};
-//  for(int i = 0; i < 10; i++)
-//  {
-//    relays[getNumOfRels()]++;
-//  }
-//  int num = 0;
-//  
-//  for(int i = 1 ; i < 6; i++)
-//  {
-//    if(relays[i] > relays[i-1])
-//      num = i;
-//  }
-//  return num;
-//}
-//
-//uint8_t getNumOfRels(void)
-//{
-//  int value = analogRead(relayCheckPin);
-//  delay(10);
-//  int relNum = 0;
-//  int distance[5];
-//  int thresholds[] = {
-//    0, 342, 512, 614, 683, 732   };
-//  for(int i = 0; i< 6; i++)
-//  {
-//    thresholds[i] < value? distance[i] = value - thresholds[i] : distance[i] = thresholds[i] - value;
-//    //    Serial.print(thresholds[i], DEC);
-//    //    Serial.print("\t");
-//    //    Serial.println(distance[i], DEC);
-//  }
-//
-//  for(int i = 1; i< 6; i++)
-//    if(distance[i] < distance[i-1]) relNum = i;
-//
-//  return relNum;
-//}
 
 void checkLamps(void)
 {
@@ -234,9 +182,6 @@ void reportAllLamps(void)
 void checkSensors(void)
 {
   checkPir();
-//  checkLight();
-//  checkTemp();
-//  checkMethane();
 }
 
 void checkPir(void)
@@ -261,63 +206,4 @@ void checkPir(void)
     pirTimestamp = millis();
   }
 }
-
-//void setupSensors(void)
-//{
-//  pinMode(sensorsCheckPin, INPUT);
-//  digitalWrite(sensorsCheckPin, HIGH);
-//  sensorsExist = !digitalRead(sensorsCheckPin);
-//
-//  if(sensorsExist)
-//  {
-//    pinMode(pirPin, INPUT);
-//    digitalWrite(pirPin, HIGH);
-//    pinMode(heaterPin, OUTPUT);
-//    pinMode(securityPin, INPUT);
-//    digitalWrite(securityPin, HIGH);
-//    uber.blinkLED(1, 500);
-//  } 
-//}
-
-//void checkLight(void)
-//{
-//  // for light sensor
-//
-//  static unsigned long lightTimestamp = 0;
-//  if(millis() - lightTimestamp > 3 * 60000)
-//  {
-//    lightValue = analogRead(lightPin);  // read the value from the sensor
-//    uber.sendValue("light", lightValue);
-//    lightTimestamp = millis();
-//  }
-//
-//}
-//
-//void checkTemp(void)
-//{
-//  // for temp sensor
-//
-//  static unsigned long tempTimestamp = 0;
-//  if(millis() - tempTimestamp > 3 * 60000)
-//  {
-//    uint8_t value = analogRead(tempPin);  // read the value from the sensor
-//    tempValue = map(value, 0, 1024, 0, 5000)/10;  
-//    uber.sendValue("temperature", tempValue);
-//    tempTimestamp = millis();
-//  }
-//}
-//
-//void checkMethane(void)
-//{
-//  // for temp sensor
-//
-//  static unsigned long methaneTimestamp = 0;
-//  if(millis() - methaneTimestamp > 3 * 60000)
-//  {
-//    methaneValue = analogRead(methanePin);  // read the value from the sensor
-//    uber.sendValue("ch4", methaneValue);    
-//    methaneTimestamp = millis();
-//  }
-//}
-//
 
