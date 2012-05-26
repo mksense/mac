@@ -4,6 +4,7 @@
 #include <Uberdust.h>
 
 #define ZONE_NAME "zone"
+#define PROX_DISTANCE 35.0
 
 // Create the xbee object
 XBeeRadio xbee = XBeeRadio(); 
@@ -53,6 +54,7 @@ void setup()
   uber.setup(&xbee, &tx);
 
   setupRelays();
+  initializePins();
   
   delay(1000);
   uber.blinkLED(numOfRelays, 200*numOfRelays);
@@ -64,11 +66,56 @@ void setup()
 void loop()
 {
   periodicBlink();
-
-  if(numOfRelays)
-    checkLamps();
-
+  doCheckSensors();
+  
+  doCheckMode();
+  if(modeStatus)
+  {
+    if(numOfRelays)
+      checkLamps();
+    checkSensors();
+  }
+  else
+  {
+    static unsigned long valveTimestamp = 0;
+    if(proxStatus && !floodStatus)
+    {
+      digitalWrite(lampPins[1], HIGH);
+      valveTimestamp = millis();
+    }
+    else
+    {
+      if(millis() - valveTimestamp > 1000)
+        digitalWrite(lampPins[1], LOW);
+    }
+    
+    static unsigned long moveTimestamp = 0;
+    if(pirStatus)
+    {
+      digitalWrite(lampPins[0], HIGH);
+      moveTimestamp = millis();
+    }
+    else
+    {
+      if(millis() - moveTimestamp > 60000)
+        digitalWrite(lampPins[0], LOW);
+    }
+  }
   periodicCapabilities();
+}
+
+void initializePins(void)
+{
+  pinMode(ledPin, OUTPUT);
+  
+  pinMode(pirPin, INPUT);
+  digitalWrite(pirPin, HIGH);
+  
+  pinMode(floodPin, INPUT);
+  digitalWrite(floodPin, HIGH);
+
+  pinMode(modePin, INPUT);
+  digitalWrite(modePin, HIGH);
 }
 
 void periodicBlink()
@@ -100,7 +147,9 @@ void sendCapabilities(void)
   {
     uber.sendValue("report", String(ZONE_NAME)+(i+1));
   }
-
+  uber.sendValue("report", "proximity");
+  uber.sendValue("report", "pir");
+  uber.sendValue("report", "flood");
 }
 
 void setupRelays(void)
@@ -179,31 +228,131 @@ void reportAllLamps(void)
     reportLamp(i);
 }
 
-void checkSensors(void)
+void doCheckSensors(void)
 {
-  checkPir();
+  doCheckFlood();
+  doCheckPir();
+  doCheckProximity();
 }
 
-void checkPir(void)
+void checkSensors(void)
+{
+  checkFlood();
+  checkPir();
+  checkProximity();
+}
+
+void doCheckPir(void)
 {
   static unsigned long pirTimestamp = 0;
   if(millis() - pirTimestamp > 500)
   {
-
-    int newPirStatus = digitalRead(pirPin); // read the value from the sensor
-    if(newPirStatus != pirStatus || !newPirStatus)
-    {
-
-      uber.sendValue("pir", !newPirStatus);
-      if(newPirStatus)
-      {
-        uber.sendValue("pir", !newPirStatus);
-        uber.sendValue("pir", !newPirStatus);
-      }
-
-    }
-    pirStatus = newPirStatus;
+    pirStatus = !digitalRead(pirPin); // read the value from the sensor
     pirTimestamp = millis();
   }
 }
 
+void checkPir(void)
+{
+
+  static uint8_t oldPirStatus = 0;
+  if(oldPirStatus != pirStatus)
+  {
+    uber.sendValue("pir", pirStatus);
+    if(oldPirStatus)
+    {
+      uber.sendValue("pir", pirStatus);
+      uber.sendValue("pir", pirStatus);
+    }
+    oldPirStatus = pirStatus;
+  }
+  
+  static unsigned long pirTimestamp = 0;
+  if(millis() - pirTimestamp > 1000)
+  {
+    if(pirStatus)
+      uber.sendValue("pir", pirStatus);
+    pirTimestamp = millis();
+  }
+}
+
+
+void doCheckProximity()
+{
+  static unsigned long proxTimestamp = 0;
+  if(millis() - proxTimestamp > 30)
+  {
+    static uint8_t count = 0;
+    static float data[5];
+    float volts = analogRead(proxPin)*0.0048828125;  // value from sensor * (5/1024) - if running 3.3.volts then change 5 to 3.3
+    data[count++] = 65*pow(volts, -1.10)*0.254;
+    if(count == 5) count = 0;
+    
+    int value_count = 0;
+    for(int i = 0; i < 5; i++)
+    {
+      if(data[i] > 3.0 && data[i] < PROX_DISTANCE)
+        value_count++;
+    }
+    if(value_count == 5)
+      proxStatus = HIGH;
+    else
+      proxStatus = LOW;
+      
+      proxTimestamp = millis();
+  }
+}  
+
+void checkProximity(void)
+{
+  static uint8_t oldProxStatus = 0;
+  if(proxStatus != oldProxStatus)
+  {
+    uber.sendValue("proximity", proxStatus);
+    oldProxStatus = proxStatus;
+  }
+  
+  static unsigned long proxTimestamp = 0;
+  if(millis() - proxTimestamp > 60000)
+  {
+    uber.sendValue("proximity", proxStatus);
+    proxTimestamp = millis();
+  }
+}
+
+void doCheckFlood(void)
+{
+  static unsigned long floodTimestamp = 0;
+  if(millis() - floodTimestamp > 500)
+  {
+    floodStatus = !digitalRead(floodPin); // read the value from the sensor
+    floodTimestamp = millis();
+  }
+}
+
+void checkFlood(void)
+{
+  static uint8_t oldFloodStatus = 0;
+  if(floodStatus != oldFloodStatus)
+  {
+    uber.sendValue("flood", floodStatus);
+    oldFloodStatus = floodStatus;
+  }
+  
+  static unsigned long floodTimestamp = 0;
+  if(millis() - floodTimestamp > 60000)
+  {
+    uber.sendValue("flood", floodStatus);
+    floodTimestamp = millis();
+  }
+}
+
+void doCheckMode(void)
+{
+  static unsigned long modeTimestamp = 0;
+  if(millis() - modeTimestamp > 500)
+  {
+    modeStatus = digitalRead(modePin); // read the value from the sensor
+    modeTimestamp = millis();
+  }
+}
