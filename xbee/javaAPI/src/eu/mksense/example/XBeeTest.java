@@ -25,9 +25,6 @@ public class XBeeTest implements MessageListener {
        XBeeRadio.getInstance().send(XBeeRadio.BROADCAST, 111, new int[2]);
        //XBeeRadio.getInstance().send(XBeeRadio.BROADCAST, 111, new int[2]);
        //XBeeRadio.getInstance().send(XBeeRadio.BROADCAST,111, new int[2]);
-        
-
-        
 
     }
 }

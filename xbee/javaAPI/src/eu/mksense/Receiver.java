@@ -40,18 +40,22 @@ public class Receiver extends Thread implements PacketListener {
                 final RxResponse16 response = queue.take();
                 //messageListeners.get(110).receive(response);
                 //Check if a valid RxResponse16 message.
-                if (response.getData()[0] == XBeeRadio.LP1
-                        && response.getData()[1] == XBeeRadio.LP2) {
-                    //Forward the message to the registered Listeners.
-                    final int port = response.getData()[2];
-                    if (messageListeners.containsKey(port)) {
-                        int[] tmpArray = new int[response.getData().length - 3];
-                        System.arraycopy(response.getData(), 3, tmpArray, 0, tmpArray.length);
-                        response.setData(tmpArray);
-                        messageListeners.get(port).receive(response);
+                System.out.println(response.getRemoteAddress().toString());
+
+                if (response.getData().length >= 3) {
+                    if (response.getData()[0] == XBeeRadio.LP1
+                            && response.getData()[1] == XBeeRadio.LP2) {
+                        //Forward the message to the registered Listeners.
+                        final int port = response.getData()[2];
+                        if (messageListeners.containsKey(port)) {
+                            int[] tmpArray = new int[response.getData().length - 3];
+                            System.arraycopy(response.getData(), 3, tmpArray, 0, tmpArray.length);
+                            response.setData(tmpArray);
+                            messageListeners.get(port).receive(response);
+                        }
                     }
-                } 
-            } catch (InterruptedException e) {
+                }
+            } catch (final Exception e) {
                 e.printStackTrace();
             }
         }
